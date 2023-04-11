@@ -1,0 +1,44 @@
+Mar 06, 2023
+  added loading of RNAcentral ids for rat from rgd.tsv file (in addition to loading them from refseq.tsv file)
+
+Mar 02, 2023
+  updated build.gradle to be gradle 6.x + compatible
+
+Oct 03, 2022
+  processing is now limited only to species public in RGD (previously all species were processed,
+    but due to limited data loaded for non-public species, very little data was loaded by the pipeline)
+
+Sep 08, 2022
+  updated jar dependencies
+
+Apr 18, 2022
+  fixed logging of dates
+
+Mar 04, 2022
+  tuned up logging
+
+Jan 06, 2022
+  updated log4j to avoid zero day exploit
+
+Sep 25, 2020
+  improved matching
+  added separate logging of multimatches
+
+Aug 03, 2020
+  build.gradle: changed app name to 'rna-central-pipeline' from RNACentral' to align code with github
+
+Jun 19, 2020
+  updated jars
+
+Feb 25, 2020
+  -removed unused 'spring' log
+
+Jan 29, 2020
+  -qc now done by apache CollectionUtils
+  -downloaded files are now saved compressed, to preserve disk space
+
+Nov 18, 2019
+  -code cleanup
+
+v 1.0.0, Mar 04, 2019
+  -RNACentral xdb ids loaded by matching REFSEQ accessions
