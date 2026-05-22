@@ -4,6 +4,7 @@ import edu.mcw.rgd.dao.impl.MapDAO;
 import edu.mcw.rgd.dao.impl.variants.VariantDAO;
 import edu.mcw.rgd.datamodel.Chromosome;
 import edu.mcw.rgd.datamodel.variants.VariantMapData;
+import edu.mcw.rgd.process.FileDownloader2;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -52,5 +53,16 @@ public class DAO {
     public List<VariantMapData> getVariants(int mapKey, String chr) throws Exception {
         List<VariantMapData> variants = vdao.getVariantsWithGeneLocation(mapKey, chr, 1, Integer.MAX_VALUE);
         return variants;
+    }
+
+    // retrieve the reference sequence for a genomic region (1-based, inclusive) via the RGD seqretrieve service;
+    // the returned string is the bare sequence, so the base at position P is at string index (P - fromPos)
+    public String getReferenceSequence( int mapKey, String chr, int fromPos, int toPos ) throws Exception {
+        String url = "https://dev.rgd.mcw.edu/rgdweb/seqretrieve/retrieve.html"
+                + "?mapKey=" + mapKey + "&chr=" + chr
+                + "&startPos=" + fromPos + "&stopPos=" + toPos + "&format=text";
+        FileDownloader2 fd = new FileDownloader2();
+        fd.setExternalFile(url);
+        return fd.download();
     }
 }

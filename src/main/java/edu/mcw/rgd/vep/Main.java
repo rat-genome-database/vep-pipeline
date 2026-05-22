@@ -2,6 +2,7 @@ package edu.mcw.rgd.vep;
 
 import edu.mcw.rgd.datamodel.variants.VariantMapData;
 import edu.mcw.rgd.process.Utils;
+import htsjdk.samtools.util.BlockCompressedOutputStream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
@@ -10,6 +11,8 @@ import org.springframework.core.io.FileSystemResource;
 
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -82,7 +85,9 @@ public class Main {
         String outFile = new File(outDir, assemblyName+".vcf.gz").getAbsolutePath();
         log.info("   writing to "+outFile);
 
-        BufferedWriter out = Utils.openWriter(outFile);
+        // BGZF (bgzip) format -- a valid gzip file that also supports tabix indexing
+        BufferedWriter out = new BufferedWriter(new OutputStreamWriter(
+                new BlockCompressedOutputStream(new File(outFile)), StandardCharsets.UTF_8));
         out.write("##fileformat=VCFv4.0\n");
         out.write("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n");
 
@@ -90,40 +95,67 @@ public class Main {
             List<VariantMapData> variants = dao.getVariants(mapKey, chr);
             log.info("  chr "+chr+", variants read = " + Utils.formatThousands(variants.size()));
 
-            // sort variants by chromosome and position
-            Collections.sort(variants, new Comparator<VariantMapData>() {
-                @Override
-                public int compare(VariantMapData d1, VariantMapData d2) {
-                    int r = d1.getChromosome().compareTo(d2.getChromosome());
-                    if (r != 0) {
-                        return r;
-                    }
-                    return (int) (d1.getStartPos() - d2.getStartPos());
+            // an indel (empty REF or empty ALT) needs a single-base upstream anchor to be valid VCF;
+            // for variants with no padding base stored, fetch that base from the reference sequence
+            int minNeeded = Integer.MAX_VALUE, maxNeeded = 0;
+            for( VariantMapData d: variants ) {
+                if( needsFetchedPaddingBase(d) && d.getStartPos()>1 ) {
+                    int p = (int)(d.getStartPos()-1);
+                    minNeeded = Math.min(minNeeded, p);
+                    maxNeeded = Math.max(maxNeeded, p);
                 }
-            });
-            log.debug("    variants sorted");
+            }
+            String refSeq = null;
+            int refSeqStart = minNeeded;
+            if( maxNeeded>0 ) {
+                refSeq = dao.getReferenceSequence(mapKey, chr, minNeeded, maxNeeded);
+                log.info("    fetched reference sequence "+chr+":"+minNeeded+"-"+maxNeeded+" to supply missing padding bases");
+            }
 
+            List<String> dataLines = new ArrayList<>(variants.size());
+            int skipped = 0;
             for (VariantMapData d : variants) {
 
                 long pos = d.getStartPos();
                 String refNuc = Utils.defaultString(d.getReferenceNucleotide());
                 String varNuc = Utils.defaultString(d.getVariantNucleotide());
 
-                int paddingBaseLen = Utils.defaultString(d.getPaddingBase()).length();
-                if (paddingBaseLen > 0) {
-                    pos -= paddingBaseLen;
-                    refNuc = d.getPaddingBase() + refNuc;
-                    varNuc = d.getPaddingBase() + varNuc;
+                String paddingBase = Utils.defaultString(d.getPaddingBase());
+                if( paddingBase.isEmpty() && needsFetchedPaddingBase(d) && refSeq!=null ) {
+                    int idx = (int)(d.getStartPos()-1) - refSeqStart;
+                    if( idx>=0 && idx<refSeq.length() ) {
+                        paddingBase = refSeq.substring(idx, idx+1).toUpperCase();
+                    }
+                }
+                if( !paddingBase.isEmpty() ) {
+                    pos -= paddingBase.length();
+                    refNuc = paddingBase + refNuc;
+                    varNuc = paddingBase + varNuc;
                 }
 
-                out.write(d.getChromosome() + "\t"
-                        + pos + "\t"
-                        + d.getId() + "\t"
-                        + refNuc + "\t"
-                        + varNuc + "\t"
-                        + ".\t.\t.\n");
+                // never emit an empty REF or ALT -- that is malformed VCF
+                if( refNuc.isEmpty() || varNuc.isEmpty() ) {
+                    log.warn("    skipped variant lacking a padding base: "+chr+":"+d.getStartPos()+" id="+d.getId());
+                    skipped++;
+                    continue;
+                }
+
+                dataLines.add(d.getChromosome()+"\t"+pos+"\t"+d.getId()+"\t"+refNuc+"\t"+varNuc+"\t.\t.\t.\n");
+            }
+            if( skipped>0 ) {
+                log.warn("  chr "+chr+": skipped "+skipped+" variant(s) with no padding base available");
             }
 
+            // VCF requires records ordered by position within a chromosome;
+            // the padding base shifts POS, so sort on the final POS
+            dataLines.sort( (l1, l2) -> {
+                long p1 = posOf(l1), p2 = posOf(l2);
+                return p1!=p2 ? Long.compare(p1, p2) : l1.compareTo(l2);
+            });
+
+            for( String line: dataLines ) {
+                out.write(line);
+            }
         }
 
         out.close();
@@ -133,6 +165,19 @@ public class Main {
         log.info("");
     }
 
+
+    // a pure insertion (empty REF) or pure deletion (empty ALT) with no padding base stored
+    private static boolean needsFetchedPaddingBase(VariantMapData d) {
+        return Utils.isStringEmpty(d.getPaddingBase())
+                && (Utils.isStringEmpty(d.getReferenceNucleotide()) || Utils.isStringEmpty(d.getVariantNucleotide()));
+    }
+
+    // extract the POS field (2nd column) from a rendered VCF data line
+    private static long posOf(String vcfLine) {
+        int t1 = vcfLine.indexOf('\t');
+        int t2 = vcfLine.indexOf('\t', t1+1);
+        return Long.parseLong(vcfLine.substring(t1+1, t2));
+    }
 
     public void setVersion(String version) {
         this.version = version;

@@ -1,6 +1,8 @@
 May 22, 2026
   added --outDir cmdline arg to set the output directory; logs the full path of the generated file
   chromosomes now processed numeric-first (in numeric order), then the rest alphabetically
+  indels with no stored padding base: missing base now fetched from the reference sequence (valid VCF REF/ALT)
+  records sorted by final VCF position; output now written in bgzip (BGZF) format
 
 May 18, 2026
   initial vep-pipeline release: extract variants from RGD for a given assembly into a VCF (input for Ensembl VEP);
