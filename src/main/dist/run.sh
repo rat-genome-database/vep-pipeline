@@ -15,10 +15,12 @@ fi
 MAP_KEY=380
 # optional chromosome filter (if unset, all chromosomes are processed)
 # CHR=20
+# optional output directory (if unset, the file is written to /tmp)
+# OUT_DIR=/home/rgddata/pipelines/$APPNAME/data
 
 cd $APPDIR
 java -Dspring.config=$APPDIR/../properties/default_db2.xml \
     -Dlog4j.configurationFile=file://$APPDIR/properties/log4j2.xml \
-    -jar lib/${APPNAME}.jar --mapKey $MAP_KEY ${CHR:+--chr $CHR} 2>&1 > $APPDIR/run.log
+    -jar lib/${APPNAME}.jar --mapKey $MAP_KEY ${CHR:+--chr $CHR} ${OUT_DIR:+--outDir $OUT_DIR} 2>&1 > $APPDIR/run.log
 
 mailx -s "[$SERVER] vep-pipeline run" $EMAIL_LIST < $APPDIR/logs/summary.log
