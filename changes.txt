@@ -1,3 +1,7 @@
+May 22, 2026
+  added --outDir cmdline arg to set the output directory; logs the full path of the generated file
+  chromosomes now processed numeric-first (in numeric order), then the rest alphabetically
+
 May 18, 2026
   initial vep-pipeline release: extract variants from RGD for a given assembly into a VCF (input for Ensembl VEP);
     run.sh takes assembly map_key with optional chromosome filter; output file named by official assembly name

@@ -1,6 +1,6 @@
 <!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
 <beans>
     <bean id="manager" class="edu.mcw.rgd.vep.Main">
-        <property name="version" value="vep-pipeline   -- build May 18, 2026" />
+        <property name="version" value="vep-pipeline   -- build May 22, 2026" />
     </bean>
 </beans>

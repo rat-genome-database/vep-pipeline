@@ -9,6 +9,7 @@ import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
 import org.springframework.core.io.FileSystemResource;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -31,27 +32,30 @@ public class Main {
 
         int mapKey = 0;
         String chrFilter = null;
+        String outDir = "/tmp";
         for( int i=0; i<args.length; i++ ) {
             if( "--mapKey".equals(args[i]) && i+1<args.length ) {
                 mapKey = Integer.parseInt(args[++i]);
             } else if( "--chr".equals(args[i]) && i+1<args.length ) {
                 chrFilter = args[++i];
+            } else if( "--outDir".equals(args[i]) && i+1<args.length ) {
+                outDir = args[++i];
             }
         }
         if( mapKey==0 ) {
-            System.err.println("Usage: --mapKey N [--chr CHR]");
+            System.err.println("Usage: --mapKey N [--chr CHR] [--outDir DIR]");
             System.exit(1);
         }
 
         try {
-            manager.run(mapKey, chrFilter);
+            manager.run(mapKey, chrFilter, outDir);
         }catch (Exception e) {
             Utils.printStackTrace(e, manager.log);
             throw e;
         }
     }
 
-    public void run(int mapKey, String chrFilter) throws Exception {
+    public void run(int mapKey, String chrFilter, String outDir) throws Exception {
 
         long startTime = System.currentTimeMillis();
 
@@ -75,7 +79,10 @@ public class Main {
             chromosomes = dao.getChromosomeNames(mapKey);
         }
 
-        BufferedWriter out = Utils.openWriter("/tmp/"+assemblyName+".vcf.gz");
+        String outFile = new File(outDir, assemblyName+".vcf.gz").getAbsolutePath();
+        log.info("   writing to "+outFile);
+
+        BufferedWriter out = Utils.openWriter(outFile);
         out.write("##fileformat=VCFv4.0\n");
         out.write("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n");
 
