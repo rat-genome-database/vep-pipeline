@@ -2,5 +2,12 @@
 <beans>
     <bean id="manager" class="edu.mcw.rgd.vep.Main">
         <property name="version" value="vep-pipeline   -- build May 22, 2026" />
+        <!-- seqretrieve service base url per environment; selected at runtime via the --env cmdline arg -->
+        <property name="seqRetrieveUrl">
+            <map>
+                <entry key="dev"  value="https://dev.rgd.mcw.edu/rgdweb/seqretrieve/retrieve.html" />
+                <entry key="prod" value="https://pipelines.rgd.mcw.edu/rgdweb/seqretrieve/retrieve.html" />
+            </map>
+        </property>
     </bean>
 </beans>

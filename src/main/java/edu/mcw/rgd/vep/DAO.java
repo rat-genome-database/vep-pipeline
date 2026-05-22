@@ -57,8 +57,8 @@ public class DAO {
 
     // retrieve the reference sequence for a genomic region (1-based, inclusive) via the RGD seqretrieve service;
     // the returned string is the bare sequence, so the base at position P is at string index (P - fromPos)
-    public String getReferenceSequence( int mapKey, String chr, int fromPos, int toPos ) throws Exception {
-        String url = "https://dev.rgd.mcw.edu/rgdweb/seqretrieve/retrieve.html"
+    public String getReferenceSequence( String seqRetrieveUrl, int mapKey, String chr, int fromPos, int toPos ) throws Exception {
+        String url = seqRetrieveUrl
                 + "?mapKey=" + mapKey + "&chr=" + chr
                 + "&startPos=" + fromPos + "&stopPos=" + toPos + "&format=text";
         FileDownloader2 fd = new FileDownloader2();

@@ -24,6 +24,7 @@ public class Main {
 
     private DAO dao = new DAO();
     private String version;
+    private Map<String,String> seqRetrieveUrl;
 
     Logger log = LogManager.getLogger("status");
 
@@ -36,6 +37,7 @@ public class Main {
         int mapKey = 0;
         String chrFilter = null;
         String outDir = "/tmp";
+        String env = "dev";
         for( int i=0; i<args.length; i++ ) {
             if( "--mapKey".equals(args[i]) && i+1<args.length ) {
                 mapKey = Integer.parseInt(args[++i]);
@@ -43,22 +45,24 @@ public class Main {
                 chrFilter = args[++i];
             } else if( "--outDir".equals(args[i]) && i+1<args.length ) {
                 outDir = args[++i];
+            } else if( "--env".equals(args[i]) && i+1<args.length ) {
+                env = args[++i];
             }
         }
         if( mapKey==0 ) {
-            System.err.println("Usage: --mapKey N [--chr CHR] [--outDir DIR]");
+            System.err.println("Usage: --mapKey N [--chr CHR] [--outDir DIR] [--env prod|dev]");
             System.exit(1);
         }
 
         try {
-            manager.run(mapKey, chrFilter, outDir);
+            manager.run(mapKey, chrFilter, outDir, env);
         }catch (Exception e) {
             Utils.printStackTrace(e, manager.log);
             throw e;
         }
     }
 
-    public void run(int mapKey, String chrFilter, String outDir) throws Exception {
+    public void run(int mapKey, String chrFilter, String outDir, String env) throws Exception {
 
         long startTime = System.currentTimeMillis();
 
@@ -73,6 +77,9 @@ public class Main {
 
         String assemblyName = dao.getMapName(mapKey);
         log.info("   assembly: "+assemblyName+" (mapKey="+mapKey+")");
+
+        String seqRetrieveUrl = this.seqRetrieveUrl.getOrDefault(env, this.seqRetrieveUrl.get("dev"));
+        log.info("   environment: "+env+"  (seqretrieve: "+seqRetrieveUrl+")");
 
         List<String> chromosomes;
         if( chrFilter!=null ) {
@@ -108,7 +115,7 @@ public class Main {
             String refSeq = null;
             int refSeqStart = minNeeded;
             if( maxNeeded>0 ) {
-                refSeq = dao.getReferenceSequence(mapKey, chr, minNeeded, maxNeeded);
+                refSeq = dao.getReferenceSequence(seqRetrieveUrl, mapKey, chr, minNeeded, maxNeeded);
                 log.info("    fetched reference sequence "+chr+":"+minNeeded+"-"+maxNeeded+" to supply missing padding bases");
             }
 
@@ -185,6 +192,14 @@ public class Main {
 
     public String getVersion() {
         return version;
+    }
+
+    public void setSeqRetrieveUrl(Map<String,String> seqRetrieveUrl) {
+        this.seqRetrieveUrl = seqRetrieveUrl;
+    }
+
+    public Map<String,String> getSeqRetrieveUrl() {
+        return seqRetrieveUrl;
     }
 }
 
